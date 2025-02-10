@@ -30,6 +30,21 @@ def list_prime_parts(request: Request):
     return items
 
 
+@router.get("/my-list/{user_id}", response_description="List all items in the users list of items tracked", response_model=List[Item])
+def list_user_items(user_id: str, request: Request):
+    print("my-list")
+
+    item_ids = [
+        "b0029414-5c7e-4eca-8bea-a629c3d2d02a",
+        "797b32b2-8cb3-48d2-a6e4-5ce492d0082e",
+        "3e939338-60dd-4784-bc2a-ca5d81ec134a",
+    ]
+
+
+    items = list(request.app.database["items"].find({"_id": { "$in" : item_ids } } ) )
+    return items
+
+
 
 @router.get("/", response_description="List all items", response_model=List[Item])
 def list_items(request: Request):
