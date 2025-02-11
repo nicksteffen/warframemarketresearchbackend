@@ -72,3 +72,4 @@ class ItemUpdate(BaseModel):
                 "item_type": "MOD"
             }
         }
+

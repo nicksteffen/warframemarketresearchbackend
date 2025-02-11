@@ -3,7 +3,9 @@ from dotenv import dotenv_values
 from pymongo import MongoClient
 
 
-from routes import router as item_router
+from routers.item_router import router as item_router
+
+from routers.user_router import router as user_router
 
 config = dotenv_values(".env")
 
@@ -21,3 +23,4 @@ def shutdown_db_client():
 
 
 app.include_router(item_router, tags=["items"], prefix="/item")
+app.include_router(user_router, tags=["users"], prefix="/user")
