@@ -18,7 +18,7 @@ def create_item(request: Request, item: Item = Body(...)):
 
     return created_item
 
-
+# todo see todo in the user_router about getting items by id instead
 @router.get("/mods", response_description="List all items with item_type MOD", response_model=List[Item])
 def list_mods(request: Request):
     items = list(request.app.database["items"].find({"item_type": "MOD"}))
@@ -48,8 +48,8 @@ def list_user_items(user_id: str, request: Request):
 
 @router.post("/user-action/add-to-list", response_description="Try to add an item to the user's list", response_model=List[Item])
 def add_to_user_list(request: Request, body: dict = Body(...)):
-    data = jsonable_encoder(body)
     print("got data")
+    data = jsonable_encoder(body)
     print(data)
     user_id = data["userId"]
     item = data["item"]
