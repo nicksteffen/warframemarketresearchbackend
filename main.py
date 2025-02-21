@@ -22,5 +22,12 @@ def shutdown_db_client():
     app.mongodb_client.close()
 
 
+def get_users_collection():
+    return app.database["users"]
+
+def get_items_collection():
+    return app.database["items"]
+
+
 app.include_router(item_router, tags=["items"], prefix="/item")
 app.include_router(user_router, tags=["users"], prefix="/user")

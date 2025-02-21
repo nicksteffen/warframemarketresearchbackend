@@ -18,6 +18,13 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str  # Plain-text password (will be hashed before storage)
 
+class UserLogin(UserBase):
+    password: str  # Plain-text password (will be hashed before storage
+
+class UserLoginResponse(BaseModel):
+    access_token: str
+    token_type: str
+
 class UserInDB(UserBase):
     password_hash: str
     watchlist: List[str] = []

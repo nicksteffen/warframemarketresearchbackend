@@ -1,3 +1,4 @@
+from datetime import timedelta
 from fastapi import APIRouter, Body, Request, Response, HTTPException, status
 from fastapi.encoders import jsonable_encoder
 from fastapi import FastAPI, HTTPException, Depends
@@ -5,6 +6,7 @@ from fastapi.security import OAuth2PasswordBearer
 from typing import List
 from models.itemModels import Item
 from models.userModel import *
+from jose import jwt, JWTError
 import bcrypt
 
 
@@ -27,10 +29,56 @@ def test():
     return "test"
 
 # OAuth2 for token-based authentication
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+
+
+
+SECRET_KEY = "your-secret-key"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+credentials_exception = HTTPException(
+        status_code=401,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+async def get_current_user_email(token: str = Depends(oauth2_scheme),):
+    print("here's the token")
+    print(token)
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    return email
+
+
+
+@router.get("/protected")
+async def protected_route(request: Request, 
+                          current_user: dict = Depends(get_current_user_email)):
+
+    print("HIT PROTEC")
+    users_collection = request.app.database["users"]
+    user = users_collection.find_one({"email": current_user})
+    if user is None:
+        raise credentials_exception
+    # return user
+    return {"message": "You are authenticated", "user": user["username"]}
+
+def create_access_token(data: dict):
+    # Create a JWT token with the user information and expiration time
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+    # return user
 
 @router.post("/register", response_description="Create a new user with a unique username and email, or return an error if already exists", response_model=UserPublic)
 async def register(request: Request, user: UserCreate):
+    print("HIT REGISTER")
     # Check if the username or email already exists
     users_collection = request.app.database["users"]
     if users_collection.find_one({"username": user.username}):
@@ -52,103 +100,81 @@ async def register(request: Request, user: UserCreate):
     users_collection.insert_one(user_data)
     return user_data
 
-@router.post("/login")
-async def login(request: Request, username: str, password: str):
+@router.post("/login", response_model=UserLoginResponse)
+async def login(request: Request, user: UserLogin):
+                # username: str, password: str):
+    print("HIT LOGIN")
     users_collection = request.app.database["users"]
-    user = users_collection.find_one({"username": username})
-    if not user or not verify_password(password, user["password_hash"]):
+    db_user = users_collection.find_one({"username": user.username})
+    if not db_user or not verify_password(user.password, db_user["password_hash"]):
         raise HTTPException(status_code=400, detail="Invalid username or password")
 
     # Update last login time
     users_collection.update_one(
-        {"username": username},
+        {"username": user.username},
         {"$set": {"last_login": datetime.utcnow()}},
     )
+    # Create JWT token
+    access_token = create_access_token(data={"sub": user.email})
+    return {"access_token": access_token, "token_type": "bearer"}
 
-    return {"message": "Login successful"}
 
+# todo, these should depend on the token  and pull the username that way
 @router.post("/watchlist/delete", response_model=UserPublic)
-async def delete_from_user_list(request: Request, body: dict = Body(...)):
+async def delete_from_user_list(request: Request, body: dict = Body(...),
+                                current_user: dict = Depends(get_current_user_email)):
     users_collection = request.app.database["users"]
 
     data = jsonable_encoder(body)
     print("delete items")
     print(body)
     userId = data.get("userId")
+    user_email = current_user
     itemIds = data.get("itemIds")
     print(itemIds)
 
     users_collection.update_one(
-        {"username": userId},
+        {'email': user_email},
         {"$pull": {"watchlist": {"$in" : itemIds} }}
     )
-    updated_user = users_collection.find_one({"username": userId})
+    updated_user = users_collection.find_one({"email": user_email})
     return updated_user
 
 
-
-
 @router.post("/watchlist/add", response_model=UserPublic)
-async def add_to_user_list(request: Request, body: dict = Body(...)):
+async def add_to_user_list(request: Request, body: dict = Body(...),
+                           current_user: dict = Depends(get_current_user_email)):
     users_collection = request.app.database["users"]
 
     data = jsonable_encoder(body)
     print(data.get("userId"))
     print(data.get("itemId"))
+    print(current_user)
+    user_email = current_user
     userId = data.get("userId")
-    itemId = data.get("itemId")
+    itemIds = data.get("itemIds")
     users_collection.update_one(
-        {"username": userId},
-        {"$addToSet": {"watchlist": itemId}},  # Add item to watchlist if not already present
+        {'email': user_email},
+        # {"username": userId},
+        {"$addToSet": {"watchlist":  {
+                       "$each": itemIds}}},  # Add item to watchlist if not already present
     )
-    updated_user = users_collection.find_one({"username": userId})
+    # updated_user = users_collection.find_one({"username": userId})
+    updated_user = users_collection.find_one({"email": user_email})
     return updated_user
-
-    # test_user = UserPublic(
-    # id="test123",  # Assuming id comes from UserBase
-    # email="test@example.com", # Assuming email comes from UserBase
-    # username="testuser", # Assuming username comes from UserBase
-    # watchlist=[],
-    # watchlist=["BTC", "ETH", "SOL"],
-    # filters=Filters(
-        # min_price=10.00,
-        # max_price=100.0,
-        # rarity=[]
-    # ),
-    # notifications=Notifications(
-        # email_alerts=True,
-        # price_drop_threshold=0.0
-    # ),
-    # created_at=datetime.now(),
-    # updated_at=datetime.now(),
-    # last_login=datetime.now()
-    # )
-
-    # return test_user
 
 # todo, maybe it makes sense that this should just return the list of ids, and then we can have a separate call to return a list of items
 # we could then make things like mod and primes also just return ids, and then have a single call for returning items in a list
 @router.get("/watchlist", response_model=List[Item])
-async def get_watchlist(request: Request, username: str):
+async def get_watchlist(request: Request, current_user: dict = Depends(get_current_user_email)):
+    print("get watchlist")
     users_collection = request.app.database["users"]
-    print(username)
+    # print(username)
     # username = 
-    user = users_collection.find_one({"username": username})
+    user = users_collection.find_one({"email": current_user})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
-    
-
-    # return user["watchlist"]
-
-
-    # item_ids = [
-        # "b0029414-5c7e-4eca-8bea-a629c3d2d02a",
-        # "797b32b2-8cb3-48d2-a6e4-5ce492d0082e",
-        # "3e939338-60dd-4784-bc2a-ca5d81ec134a",
-    # ]
-
-
+    print(user)
     item_ids = user["watchlist"]
     items = list(request.app.database["items"].find({"_id": { "$in" : item_ids } } ) )
     print(items)
