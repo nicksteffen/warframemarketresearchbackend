@@ -2,7 +2,7 @@ from fastapi import APIRouter, Body, Request, Response, HTTPException, status
 from fastapi.encoders import jsonable_encoder
 from typing import List
 
-from models.itemModels import Item, ItemUpdate
+from models.itemModels import Item, ItemUpdate, Filter
 
 router = APIRouter()
 
@@ -29,7 +29,26 @@ def list_prime_parts(request: Request):
     items = list(request.app.database["items"].find({"item_type": "COMPONENT"}))
     return items
 
+#todo mods and primes need to be one method, and we pass in the filter somehow
+#  thoughts: we just pass in the filter as an object. e.g. {filter: {"item_type": "COMPONENT"}}
+@router.post("/search-items", response_description="Return all items mathcing the filter clause", response_model=List[Item])
+# def get_items_by_filter(request: Request, body: dict = Body(...)):
+def get_items_by_filter(request: Request, body: Filter): 
+    data = jsonable_encoder(body)
+    property_name = data["property_name"]
+    search_term = data["search_term"]
+    filter = {property_name : search_term}
+    wildcard = data["wildcard"]
+    if wildcard:
+        filter = {property_name: 
+                   {"$regex" : search_term}}
 
+    print(f"data filter = {filter}")
+    items = list(request.app.database["items"].find(filter))
+
+    return items
+
+#todo I think think is no longer used/ was just used for test
 @router.get("/my-list/{user_id}", response_description="List all items in the users list of items tracked", response_model=List[Item])
 def list_user_items(user_id: str, request: Request):
     print("my-list")
@@ -61,15 +80,11 @@ def add_to_user_list(request: Request, body: dict = Body(...)):
 
 
     return [item]
-                    #  item: Item = Body(...)):
-
-    
-
 
 
 @router.get("/", response_description="List all items", response_model=List[Item])
 def list_items(request: Request):
-    items = list(request.app.database["items"].find(limit=100))
+    items = list(request.app.database["items"].find())
     return items
 
 @router.get("/{id}", response_description="Get a single item by id", response_model=Item)

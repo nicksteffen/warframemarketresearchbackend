@@ -18,7 +18,10 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str  # Plain-text password (will be hashed before storage)
 
-class UserLogin(UserBase):
+# class UserLogin(UserBase):
+    # password: str  # Plain-text password (will be hashed before storage
+class UserLogin(BaseModel):
+    email: EmailStr
     password: str  # Plain-text password (will be hashed before storage
 
 class UserLoginResponse(BaseModel):

@@ -3,7 +3,10 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 from datetime import datetime
 
-
+class Filter(BaseModel):
+    property_name: str
+    search_term: str
+    wildcard: bool
 
 class Item(BaseModel):
     id: str = Field(default_factory=uuid.uuid4, alias="_id")

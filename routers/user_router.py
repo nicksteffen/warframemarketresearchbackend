@@ -1,4 +1,5 @@
 from datetime import timedelta
+from dotenv import dotenv_values
 from fastapi import APIRouter, Body, Request, Response, HTTPException, status
 from fastapi.encoders import jsonable_encoder
 from fastapi import FastAPI, HTTPException, Depends
@@ -32,10 +33,12 @@ def test():
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 
+config = dotenv_values(".env")
 
-SECRET_KEY = "your-secret-key"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+SECRET_KEY = config.get("TOKEN_KEY")
+ALGORITHM = config.get("ALGORITHM")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(config.get("ACCESS_TOKEN_EXPIRE_MINUTES"))
+
 credentials_exception = HTTPException(
         status_code=401,
         detail="Could not validate credentials",
@@ -105,13 +108,15 @@ async def login(request: Request, user: UserLogin):
                 # username: str, password: str):
     print("HIT LOGIN")
     users_collection = request.app.database["users"]
-    db_user = users_collection.find_one({"username": user.username})
+    # db_user = users_collection.find_one({"username": user.username})
+    db_user = users_collection.find_one({"email": user.email})
     if not db_user or not verify_password(user.password, db_user["password_hash"]):
         raise HTTPException(status_code=400, detail="Invalid username or password")
 
     # Update last login time
     users_collection.update_one(
-        {"username": user.username},
+        # {"username": user.username},
+        {"email": user.email},
         {"$set": {"last_login": datetime.utcnow()}},
     )
     # Create JWT token
