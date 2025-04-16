@@ -25,10 +25,6 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 
-@router.get("/")
-def test():
-    return "test"
-
 # OAuth2 for token-based authentication
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
@@ -125,6 +121,9 @@ async def login(request: Request, user: UserLogin):
 
 
 # todo, these should depend on the token  and pull the username that way
+# todo - This probably isn't a proper POST request, we're updating part of 
+# the watchlist. Actually, this logic maybe needs to completely move to the new
+# lists router
 @router.post("/watchlist/delete", response_model=UserPublic)
 async def delete_from_user_list(request: Request, body: dict = Body(...),
                                 current_user: dict = Depends(get_current_user_email)):
@@ -133,10 +132,10 @@ async def delete_from_user_list(request: Request, body: dict = Body(...),
     data = jsonable_encoder(body)
     print("delete items")
     print(body)
-    userId = data.get("userId")
+    # userId = data.get("userId")
     user_email = current_user
     itemIds = data.get("itemIds")
-    print(itemIds)
+    # print(itemIds)
 
     users_collection.update_one(
         {'email': user_email},
@@ -145,7 +144,7 @@ async def delete_from_user_list(request: Request, body: dict = Body(...),
     updated_user = users_collection.find_one({"email": user_email})
     return updated_user
 
-
+# todo - made redundant by lists router
 @router.post("/watchlist/add", response_model=UserPublic)
 async def add_to_user_list(request: Request, body: dict = Body(...),
                            current_user: dict = Depends(get_current_user_email)):
@@ -170,6 +169,7 @@ async def add_to_user_list(request: Request, body: dict = Body(...),
 
 # todo, maybe it makes sense that this should just return the list of ids, and then we can have a separate call to return a list of items
 # we could then make things like mod and primes also just return ids, and then have a single call for returning items in a list
+# todo - made redundant by lists router
 @router.get("/watchlist", response_model=List[Item])
 async def get_watchlist(request: Request, current_user: dict = Depends(get_current_user_email)):
     print("get watchlist")
@@ -184,3 +184,5 @@ async def get_watchlist(request: Request, current_user: dict = Depends(get_curre
     items = list(request.app.database["items"].find({"_id": { "$in" : item_ids } } ) )
     print(items)
     return items
+
+   

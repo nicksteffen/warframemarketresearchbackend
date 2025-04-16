@@ -29,6 +29,11 @@ def list_prime_parts(request: Request):
     items = list(request.app.database["items"].find({"item_type": "COMPONENT"}))
     return items
 
+@router.get("/arcanes", response_description="List all arcaneitems", response_model=List[Item])
+def list_arcanes(request: Request):
+    items = list(request.app.database["items"].find({"item_type": "ARCANE"}))
+    return items
+
 #todo mods and primes need to be one method, and we pass in the filter somehow
 #  thoughts: we just pass in the filter as an object. e.g. {filter: {"item_type": "COMPONENT"}}
 @router.post("/search-items", response_description="Return all items mathcing the filter clause", response_model=List[Item])
@@ -93,6 +98,21 @@ def find_item(id: str, request: Request):
         return item
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Item with ID {id} not found")
 
+@router.post("/get-items", response_description="Get multiple items by IDs", response_model=List[Item])
+def find_items(request: Request, ids: List[str] = Body(...)):
+    print("Getting items for ids")
+    print(ids)
+    # Query MongoDB for items matching any of the provided IDs
+    items = list(request.app.database["items"].find({"_id": {"$in": ids}}))
+    
+    if not items:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No items found with the provided IDs"
+        )
+    
+    print(f"found itesm: {items}")
+    return items
 
 @router.put("/{id}", response_description="Update a item", response_model=Item)
 def update_item(id: str, request: Request, item: ItemUpdate = Body(...)):

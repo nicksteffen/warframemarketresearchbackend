@@ -3,9 +3,6 @@ from dotenv import dotenv_values
 from pymongo import MongoClient
 
 
-from routers.item_router import router as item_router
-
-from routers.user_router import router as user_router
 
 config = dotenv_values(".env")
 
@@ -28,6 +25,13 @@ def get_users_collection():
 def get_items_collection():
     return app.database["items"]
 
+def get_lists_collection():
+    return app.database["lists"]
 
+# note, importing after app is fully initialized to avoid circular dependency
+from routers.item_router import router as item_router
+from routers.user_router import router as user_router
+from routers.lists_router import router as lists_router
 app.include_router(item_router, tags=["items"], prefix="/item")
 app.include_router(user_router, tags=["users"], prefix="/user")
+app.include_router(lists_router, tags=["lists"], prefix="/lists")
