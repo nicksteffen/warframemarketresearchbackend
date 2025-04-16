@@ -100,8 +100,6 @@ def find_item(id: str, request: Request):
 
 @router.post("/get-items", response_description="Get multiple items by IDs", response_model=List[Item])
 def find_items(request: Request, ids: List[str] = Body(...)):
-    print("Getting items for ids")
-    print(ids)
     # Query MongoDB for items matching any of the provided IDs
     items = list(request.app.database["items"].find({"_id": {"$in": ids}}))
     

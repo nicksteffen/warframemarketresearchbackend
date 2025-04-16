@@ -151,7 +151,9 @@ async def add_to_user_list(request: Request, body: dict = Body(...),
     users_collection = request.app.database["users"]
 
     data = jsonable_encoder(body)
+    print("USERID:")
     print(data.get("userId"))
+    print("ITEM ID: ")
     print(data.get("itemId"))
     print(current_user)
     user_email = current_user

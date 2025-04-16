@@ -57,8 +57,6 @@ async def get_list(
     current_user: PyObjectId = Depends(auth_service.get_current_user_id),
     lists_collection : Collection = Depends(get_lists_collection)):
     """Get a specific list by ID"""
-    print("get list")
-    print(f"list id: {list_id}")
     if (lst := lists_collection.find_one({"_id": list_id, "owner_id": current_user})) is None:
         raise HTTPException(status_code=404, detail="List not found")
     return ListResponse(**lst)
@@ -74,35 +72,6 @@ async def update_list(
     existing = lists_collection.find_one({"_id": list_id, "owner_id": current_user})
     if not existing:
         raise HTTPException(status_code=404, detail="List not found")
-    
-    # # Build update document
-    # # updates = {"updated_at": datetime.utcnow()}
-    # if update_data.name:
-    #     existing["name"] = update_data.name
-    #     # updates["name"] = update_data.name
-    
-    # if update_data.add_items:
-    #     existing["items"].append(update_data.add_items)
-    #     # updates["$addToSet"] = {"items": {"$each": update_data.add_items}}
-    
-    # # special case for dealing with removal since pullAll not supported for replacement document
-    # if update_data.remove_items:
-    #     lists_collection.update_one(
-    #         {"_id": list_id},
-    #         {"$pullAll" :{"items": update_data.remove_items}}
-    #     )
-    #         # updates["$pullAll"] = {"items": update_data.remove_items}
-    
-    # lists_collection.update_one(
-    #     {"_id": list_id},
-    #     {"$set": existing}
-    # )
-    
-    # updated_list = lists_collection.find_one({"_id": list_id})
-
-
-    #============
-        # Build update operations
     updates = {
         "$set": {"updated_at": datetime.utcnow()}
     }
